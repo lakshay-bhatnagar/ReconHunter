@@ -104,8 +104,10 @@ recon_example.com/
 ## 📝 Authors
 
 This tool is developed by the team of two people :-
-- Lakshay Bhatnagar
-- [Mansi Singh](https://github.com/user/repo/blob/branch/other_file.md)
+- [Lakshay Bhatnagar](https://github.com/lakshay-bhatnagar)
+- [Mansi Singh](https://github.com/mansi-1204)
+
+---
 
 ## 📃 License
 
