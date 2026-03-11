@@ -72,7 +72,7 @@ run_enumeration() {
 		amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" 2>/dev/null &
 	fi
 
-	crt_output=$(curl -s "$(printf "$CRT_API" "$domain")")
+	crt_output=$(curl -m 10 -s "$(printf "$CRT_API" "$domain")")
 
 	if echo "$crt_output" | jq . >/dev/null 2>&1; then
 		echo "$crt_output" |
@@ -81,7 +81,7 @@ run_enumeration() {
 			sort -u >>"$output_dir/subs_crtsh.txt"
 	else
 		echo "[!] crt.sh API returned invalid JSON, skipping..."
-	fi &
+	fi
 
 	# Optional active scan
 	if [ "$ACTIVE_ENUM" = true ]; then
@@ -89,7 +89,7 @@ run_enumeration() {
 		amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" 2>/dev/null &
 	fi
 
-	echo "[+] Running subdomain tools..."
+	echo "[+] Waiting for enumeration tools to finish..."
 	wait
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
