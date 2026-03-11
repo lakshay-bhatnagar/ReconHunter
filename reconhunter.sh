@@ -33,7 +33,7 @@ install_tools() {
 	sudo apt install -y jq curl whatweb nmap
 	go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
-    sudo apt install findomain
+	sudo apt install findomain
 	go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
@@ -66,7 +66,16 @@ run_enumeration() {
 	subfinder -d "$domain" -silent >"$output_dir/subs_subfinder.txt" &
 	findomain -t "$domain" -u "$output_dir/subs_findomain.txt" &
 	amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" &
-	curl -s "$(printf "$CRT_API" "$domain")" | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u >>"$output_dir/subs_crtsh.txt" &
+	crt_output=$(curl -s "$(printf "$CRT_API" "$domain")")
+
+	if echo "$crt_output" | jq . >/dev/null 2>&1; then
+		echo "$crt_output" |
+			jq -r '.[].name_value' |
+			sed 's/\*\.//g' |
+			sort -u >>"$output_dir/subs_crtsh.txt"
+	else
+		echo "[!] crt.sh API returned invalid JSON, skipping..."
+	fi &
 	# Optional active scan
 	if [ "$ACTIVE_ENUM" = true ]; then
 		echo "[+] Running Amass Active Enumeration..."
@@ -596,7 +605,6 @@ if [[ "$missing" -eq 1 ]]; then
 fi
 
 echo
-
 
 print_stat() {
 	label=$1

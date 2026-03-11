@@ -54,4 +54,4 @@ report:
 
 # External APIs
 apis:
-  crtsh: "https://crt.sh/?q=%25.%s&output=json"
+  crtsh: "https://crt.sh/?q=%%25.%s&output=json"
