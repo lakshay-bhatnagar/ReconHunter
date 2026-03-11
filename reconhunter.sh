@@ -56,16 +56,21 @@ validate_domain() {
 # all the functions
 
 run_enumeration() {
+
 	# ---------------------
 	# 1. Subdomain Enumeration
 	# ---------------------
 
 	echo "[+] Running subdomain tools in parallel..."
 
-	assetfinder --subs-only "$domain" >"$output_dir/subs_assetfinder.txt" &
-	subfinder -d "$domain" -silent >"$output_dir/subs_subfinder.txt" &
-	findomain -t "$domain" -u "$output_dir/subs_findomain.txt" &
-	amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" &
+	assetfinder --subs-only "$domain" >"$output_dir/subs_assetfinder.txt" 2>/dev/null &
+
+	subfinder -d "$domain" -silent >"$output_dir/subs_subfinder.txt" 2>/dev/null &
+
+	findomain -t "$domain" -u "$output_dir/subs_findomain.txt" >/dev/null 2>&1 &
+
+	amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" 2>/dev/null &
+
 	crt_output=$(curl -s "$(printf "$CRT_API" "$domain")")
 
 	if echo "$crt_output" | jq . >/dev/null 2>&1; then
@@ -76,16 +81,20 @@ run_enumeration() {
 	else
 		echo "[!] crt.sh API returned invalid JSON, skipping..."
 	fi &
+
 	# Optional active scan
 	if [ "$ACTIVE_ENUM" = true ]; then
 		echo "[+] Running Amass Active Enumeration..."
-		amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" &
+		amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" 2>/dev/null &
 	fi
 
+    echo "[+] Running subdomain tools..."
 	wait
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
+
 	cat "$output_dir"/subs_*.txt 2>/dev/null | sort -u >"$output_dir/all_subdomains.txt"
+
 	print_stat "Subdomains found" "$output_dir/all_subdomains.txt"
 }
 
