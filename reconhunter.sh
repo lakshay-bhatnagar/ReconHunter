@@ -1,11 +1,15 @@
 #!/bin/bash
 
+GREEN="\033[0;32m"
+RED="\033[0;31m"
+NC="\033[0m"
+
 mode="full"
 
 set -euo pipefail
 
 CONFIG_FILE="config.yaml"
-
+ACTIVE_ENUM=false
 BASE_OUTPUT=$(yq '.general.output_directory' "$CONFIG_FILE")
 WORDLIST=$(yq '.wordlists.directory_bruteforce' "$CONFIG_FILE")
 FFUF_THREADS=$(yq '.performance.ffuf_threads' "$CONFIG_FILE")
@@ -24,14 +28,19 @@ install_tools() {
 
 	sudo apt update
 	sudo apt install yq
+	sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+	sudo chmod +x /usr/local/bin/yq
 	sudo apt install -y jq curl whatweb nmap
-
 	go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+    sudo apt install findomain
+	go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 	go install github.com/tomnomnom/assetfinder@latest
-
+	go install github.com/tomnomnom/waybackurls@latest
+	go install github.com/lc/gau/v2/cmd/gau@latest
+	go install github.com/projectdiscovery/ffuf@latest
 	echo "[+] Installation complete"
 }
 
@@ -57,13 +66,18 @@ run_enumeration() {
 	subfinder -d "$domain" -silent >"$output_dir/subs_subfinder.txt" &
 	findomain -t "$domain" -u "$output_dir/subs_findomain.txt" &
 	amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" &
-	amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" &
 	curl -s "$(printf "$CRT_API" "$domain")" | jq -r '.[].name_value' | sed 's/\*\.//g' | sort -u >>"$output_dir/subs_crtsh.txt" &
+	# Optional active scan
+	if [ "$ACTIVE_ENUM" = true ]; then
+		echo "[+] Running Amass Active Enumeration..."
+		amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" &
+	fi
 
 	wait
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
-	cat "$output_dir"/subs_*.txt | sort -u >"$output_dir/all_subdomains.txt"
+	cat "$output_dir"/subs_*.txt 2>/dev/null | sort -u >"$output_dir/all_subdomains.txt"
+	print_stat "Subdomains found" "$output_dir/all_subdomains.txt"
 }
 
 run_dns() {
@@ -72,6 +86,7 @@ run_dns() {
 	# ---------------------
 	echo "${GREEN}[+] Resolving live subdomains..."
 	dnsx -l "$output_dir/all_subdomains.txt" -silent -a -resp >"$output_dir/resolved.txt"
+	print_stat "Resolved hosts" "$output_dir/resolved.txt"
 }
 
 # nmap port scanning
@@ -84,6 +99,8 @@ run_port_scanning() {
 
 	if [ -s "$output_dir/resolved.txt" ]; then
 		nmap -iL "$output_dir/resolved.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
+		port_count=$(grep "open" "$output_dir/nmap_scan.gnmap" | wc -l 2>/dev/null || echo 0)
+		echo -e "${GREEN}[ReconHunter] Open ports discovered: $port_count${NC}"
 	else
 		echo "${RED}[!] Skipping Nmap - No resolved hosts found."
 	fi
@@ -142,6 +159,7 @@ run_archive_url() {
 	fi
 
 	cat "$output_dir"/urls_*.txt 2>/dev/null | sort -u >"$output_dir/all_urls.txt"
+	print_stat "URLs collected" "$output_dir/all_urls.txt"
 
 }
 
@@ -186,6 +204,7 @@ run_nuclei_scans() {
 	if [[ -s "$output_dir/all_urls.txt" ]]; then
 		nuclei -l "$output_dir/all_urls.txt" -o "$output_dir/nuclei_urls.txt"
 	fi
+	print_stat "Vulnerabilities detected" "$output_dir/nuclei_output.txt"
 	# ---------------------
 	# Done
 	# ---------------------
@@ -447,27 +466,42 @@ while [[ $# -gt 0 ]]; do
 		domain="$2"
 		shift 2
 		;;
+
+	-o | --output)
+		output_dir="$2"
+		shift 2
+		;;
+
 	--fast)
 		mode="fast"
 		shift
 		;;
+
 	--full)
 		mode="full"
 		shift
 		;;
+
 	--scan)
 		mode="scan"
 		shift
 		;;
+
+	--active)
+		ACTIVE_ENUM=true
+		shift
+		;;
+
 	--install)
 		install_tools
 		exit
 		;;
+
 	-h | --help)
 		echo "ReconHunter - Automated Recon Tool"
 		echo
 		echo "Usage:"
-		echo "  reconhunter -d <domain> [--fast|--full|--scan] -o <output_dir>"
+		echo "  reconhunter -d <domain> [--fast|--full|--scan] [options]"
 		echo
 		echo "Options:"
 		echo "  -d, --domain     Target domain"
@@ -475,17 +509,17 @@ while [[ $# -gt 0 ]]; do
 		echo "  --fast           Quick recon"
 		echo "  --full           Full recon pipeline"
 		echo "  --scan           Vulnerability scanning only"
+		echo "  --active         Enable active enumeration (amass active)"
 		echo "  --install        Install required tools"
+		echo "  -h, --help       Show this help menu"
 		exit
 		;;
+
 	--version)
 		echo "ReconHunter v1.0"
 		exit
 		;;
-	-o | --output)
-		output_dir="$2"
-		shift 2
-		;;
+
 	*)
 		echo "Unknown option: $1"
 		exit 1
@@ -516,11 +550,11 @@ mkdir -p "$output_dir"
 # ---------------------
 
 echo
-echo "==============================================="
-echo "         ReconHunter v1.0"
-echo "     Automated Recon Framework"
-echo " star on github: lakshay-bhatnagar/reconhunter"
-echo "==============================================="
+echo "====================================================="
+echo "               ReconHunter v1.0"
+echo "           Automated Recon Framework"
+echo " ⭐ GitHub: github.com/lakshay-bhatnagar/ReconHunter"
+echo "====================================================="
 echo
 echo "[*] Mode: $mode"
 echo "[*] Target: $domain"
@@ -563,9 +597,19 @@ fi
 
 echo
 
-GREEN="\033[0;32m"
-RED="\033[0;31m"
-NC="\033[0m"
+
+print_stat() {
+	label=$1
+	file=$2
+
+	if [[ -f "$file" ]]; then
+		count=$(wc -l <"$file" 2>/dev/null)
+	else
+		count=0
+	fi
+
+	echo -e "${GREEN}[ReconHunter] $label: $count${NC}"
+}
 
 # Check if jq is installed
 if ! command -v jq &>/dev/null; then
@@ -599,6 +643,9 @@ fi
 # Full Mode
 
 if [[ "$mode" == "full" ]]; then
+	if [[ "$mode" == "full" ]] && [[ "$ACTIVE_ENUM" == false ]]; then
+		ACTIVE_ENUM=true
+	fi
 	echo "[1/11] Subdomain Enumeration"
 	run_enumeration
 	echo "[2/11] DNS Resolution"
