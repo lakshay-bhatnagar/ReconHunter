@@ -90,7 +90,6 @@ run_enumeration() {
 	fi
 
 	echo "[+] Waiting for enumeration tools to finish..."
-	jobs -l
 	for job in $(jobs -p); do
 		wait "$job" || true
 	done
