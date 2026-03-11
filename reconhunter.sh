@@ -50,7 +50,7 @@ install_tools() {
 
 validate_domain() {
 	if ! [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-		echo "${RED}[!] Invalid domain format${NC}"
+		echo -e "${RED}[!] Invalid domain format${NC}"
 		exit 1
 	fi
 }
@@ -96,7 +96,7 @@ run_enumeration() {
 		wait "$job" || true
 	done
 
-	echo "${GREEN}[+] Merging and deduplicating subdomains..."
+	echo -e "${GREEN}[+] Merging and deduplicating subdomains..."
 
 	cat "$output_dir"/subs_*.txt 2>/dev/null | sort -u >"$output_dir/all_subdomains.txt"
 
@@ -107,7 +107,7 @@ run_dns() {
 	# ---------------------
 	# 2. DNS Resolution
 	# ---------------------
-	echo "${GREEN}[+] Resolving live subdomains..."
+	echo -e "${GREEN}[+] Resolving live subdomains..."
 	dnsx -l "$output_dir/all_subdomains.txt" -silent -a -resp >"$output_dir/resolved.txt"
 	print_stat "Resolved hosts" "$output_dir/resolved.txt"
 }
@@ -118,14 +118,14 @@ run_port_scanning() {
 	# ---------------------
 	# 3. Port Scanning
 	# ---------------------
-	echo "${GREEN}[+] Running Nmap port scan..."
+	echo -e "${GREEN}[+] Running Nmap port scan..."
 
 	if [ -s "$output_dir/resolved.txt" ]; then
 		nmap -iL "$output_dir/resolved.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
 		port_count=$(grep "open" "$output_dir/nmap_scan.gnmap" | wc -l 2>/dev/null || echo 0)
 		echo -e "${GREEN}[ReconHunter] Open ports discovered: $port_count${NC}"
 	else
-		echo "${RED}[!] Skipping Nmap - No resolved hosts found."
+		echo -e "${RED}[!] Skipping Nmap - No resolved hosts found."
 	fi
 }
 
@@ -133,7 +133,7 @@ run_http_probing() {
 	# ---------------------
 	# 4. HTTP Probing
 	# ---------------------
-	echo "${GREEN}[+] Probing live HTTP services..."
+	echo -e "${GREEN}[+] Probing live HTTP services..."
 	httpx -l "$output_dir/resolved.txt" -silent >"$output_dir/alive_http.txt"
 }
 
@@ -141,12 +141,12 @@ run_tech_detection() {
 	# ---------------------
 	# 5. Technology Detection
 	# ---------------------
-	echo "${GREEN}[+] Detecting technologies with WhatWeb..."
+	echo -e "${GREEN}[+] Detecting technologies with WhatWeb..."
 
 	if command -v whatweb &>/dev/null; then
 		whatweb -i "$output_dir/alive_http.txt" --log-json="$output_dir/whatweb.json" >"$output_dir/whatweb.txt"
 	else
-		echo "${RED}[!] WhatWeb not installed. Skipping tech detection."
+		echo -e "${RED}[!] WhatWeb not installed. Skipping tech detection."
 	fi
 }
 
@@ -154,13 +154,13 @@ run_screenshot_capture() {
 	# ---------------------
 	# 6. Screenshot Capture
 	# ---------------------
-	echo "${GREEN}[+] Capturing screenshots with Gowitness..."
+	echo -e "${GREEN}[+] Capturing screenshots with Gowitness..."
 
 	if command -v gowitness &>/dev/null; then
 		mkdir -p "$output_dir/$SCREENSHOT_DIR"
 		gowitness scan file -f "$output_dir/alive_http.txt" --screenshot-path "$output_dir/$SCREENSHOT_DIR"
 	else
-		echo "${RED}[!] Gowitness not installed. Skipping screenshots."
+		echo -e "${RED}[!] Gowitness not installed. Skipping screenshots."
 	fi
 }
 
@@ -168,17 +168,17 @@ run_archive_url() {
 	# ---------------------
 	# 7. Archive URL Gathering
 	# ---------------------
-	echo "${GREEN}[+] Gathering URLs from gau and waybackurls..."
+	echo -e "${GREEN}[+] Gathering URLs from gau and waybackurls..."
 	if command -v gau &>/dev/null; then
-		gau "$domain" >>"$output_dir/urls_gau.txt"
+		timeout 60 gau "$domain" >>"$output_dir/urls_gau.txt"
 	else
-		echo "${RED}[!] gau not installed"
+		echo -e "${RED}[!] gau not installed"
 	fi
 
 	if command -v waybackurls &>/dev/null; then
 		echo "$domain" | waybackurls >>"$output_dir/urls_wayback.txt"
 	else
-		echo "${RED}[!] waybackurls not installed"
+		echo -e "${RED}[!] waybackurls not installed"
 	fi
 
 	cat "$output_dir"/urls_*.txt 2>/dev/null | sort -u >"$output_dir/all_urls.txt"
@@ -190,11 +190,11 @@ run_parameter_discovery() {
 	# ---------------------
 	# 8. Parameter Discovery
 	# ---------------------
-	echo "${GREEN}[+] Running Arjun for parameter fuzzing..."
+	echo -e "${GREEN}[+] Running Arjun for parameter fuzzing..."
 	if [ -s "$output_dir/alive_http.txt" ]; then
 		arjun -i "$output_dir/alive_http.txt" -m GET -oT "$output_dir/arjun_params.txt" 2>/dev/null
 	else
-		echo "${RED}[!] Skipping Arjun - No alive HTTP hosts found."
+		echo -e "${RED}[!] Skipping Arjun - No alive HTTP hosts found."
 	fi
 
 }
@@ -203,7 +203,7 @@ run_directory_bruteforce() {
 	# ---------------------
 	# 9. Directory Bruteforcing
 	# ---------------------
-	echo "${GREEN}[+] Running ffuf on alive subdomains..."
+	echo -e "${GREEN}[+] Running ffuf on alive subdomains..."
 	wordlist="$WORDLIST"
 	if [ ! -f "$wordlist" ]; then
 		echo "[!] Wordlist not found: $wordlist"
@@ -219,11 +219,11 @@ run_nuclei_scans() {
 	# ---------------------
 	# 10. Nuclei Vulnerability Scanning
 	# ---------------------
-	echo "${GREEN}[+] Scanning with Nuclei on alive http..."
+	echo -e "${GREEN}[+] Scanning with Nuclei on alive http..."
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
 		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt"
 	fi
-	echo "${GREEN}[+] Scanning with Nuclei on all urls..."
+	echo -e "${GREEN}[+] Scanning with Nuclei on all urls..."
 	if [[ -s "$output_dir/all_urls.txt" ]]; then
 		nuclei -l "$output_dir/all_urls.txt" -o "$output_dir/nuclei_urls.txt"
 	fi
@@ -231,7 +231,7 @@ run_nuclei_scans() {
 	# ---------------------
 	# Done
 	# ---------------------
-	echo "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
+	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 }
 
 run_recon_summary_report() {
@@ -254,13 +254,13 @@ run_recon_summary_report() {
 		vuln_count=0
 	fi
 
-	echo "${NC}Total Subdomains Found : ${sub_count:-0}"
-	echo "${NC}Alive HTTP Hosts       : ${alive_count:-0}"
-	echo "${NC}URLs Collected         : ${url_count:-0}"
-	echo "${NC}Vulnerabilities Found  : ${vuln_count:-0}"
+	echo -e "${NC}Total Subdomains Found : ${sub_count:-0}"
+	echo -e "${NC}Alive HTTP Hosts       : ${alive_count:-0}"
+	echo -e "${NC}URLs Collected         : ${url_count:-0}"
+	echo -e "${NC}Vulnerabilities Found  : ${vuln_count:-0}"
 
 	echo
-	echo "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
+	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 
 	# ---------------------
 	# Report Generation
