@@ -35,11 +35,13 @@ install_tools() {
 	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
 	sudo apt install findomain
 	go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+    sudo cp ~/go/bin/httpx /usr/local/bin/
 	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 	go install github.com/tomnomnom/assetfinder@latest
 	go install github.com/tomnomnom/waybackurls@latest
 	go install github.com/lc/gau/v2/cmd/gau@latest
+    sudo mv ~/go/bin/gau /usr/local/bin/
 	go install github.com/projectdiscovery/ffuf@latest
 	echo "[+] Installation complete"
 }
@@ -132,7 +134,7 @@ run_http_probing() {
 	# 4. HTTP Probing
 	# ---------------------
 	echo "${GREEN}[+] Probing live HTTP services..."
-	httpx-toolkit -l "$output_dir/resolved.txt" -silent >"$output_dir/alive_http.txt"
+	httpx -l "$output_dir/resolved.txt" -silent >"$output_dir/alive_http.txt"
 }
 
 run_tech_detection() {
@@ -167,8 +169,8 @@ run_archive_url() {
 	# 7. Archive URL Gathering
 	# ---------------------
 	echo "${GREEN}[+] Gathering URLs from gau and waybackurls..."
-	if command -v getallurls &>/dev/null; then
-		getallurls "$domain" >>"$output_dir/urls_gau.txt"
+	if command -v gau &>/dev/null; then
+		gau "$domain" >>"$output_dir/urls_gau.txt"
 	else
 		echo "${RED}[!] gau not installed"
 	fi
@@ -242,10 +244,15 @@ run_recon_summary_report() {
 	echo "       RECON SUMMARY"
 	echo "============================"
 
-	sub_count=$(wc -l <"$output_dir/all_subdomains.txt" 2>/dev/null)
-	alive_count=$(wc -l <"$output_dir/alive_http.txt" 2>/dev/null)
-	url_count=$(wc -l <"$output_dir/all_urls.txt" 2>/dev/null)
-	vuln_count=$(wc -l <"$output_dir/nuclei_output.txt" 2>/dev/null)
+	sub_count=$(wc -l <"$output_dir/all_subdomains.txt" 2>/dev/null || echo 0)
+	alive_count=$(wc -l <"$output_dir/alive_http.txt" 2>/dev/null || echo 0)
+	url_count=$(wc -l <"$output_dir/all_urls.txt" 2>/dev/null || echo 0)
+
+	if [[ -f "$output_dir/nuclei_output.txt" ]]; then
+		vuln_count=$(wc -l <"$output_dir/nuclei_output.txt")
+	else
+		vuln_count=0
+	fi
 
 	echo "${NC}Total Subdomains Found : ${sub_count:-0}"
 	echo "${NC}Alive HTTP Hosts       : ${alive_count:-0}"
@@ -592,7 +599,8 @@ tools=(
 	findomain
 	amass
 	dnsx
-	httpx-toolkit
+	httpx
+    gau
 	nuclei
 	ffuf
 	arjun
