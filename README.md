@@ -1,5 +1,5 @@
 # ReconHunter 🔍
-[![License: MIT](https://img.shields.io)](https://opensource.org) | [![made-with-bash](https://img.shields.io/badge/Made%20with-Bash-1f425f.svg)](https://www.gnu.org) | [![Security: MIT](https://img.shields.io)](https://img.shields.io) | [![Automation](https://img.shields.io)](https://github.com)
+![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg) ![Bash](https://img.shields.io/badge/bash-%23121011.svg?style=flat&logo=gnu-bash&logoColor=white) ![Security](https://img.shields.io/badge/Security-Tool-red?style=flat&logo=springsecurity) ![Automation](https://img.shields.io/badge/Maintained%3F-Automation-blueviolet)
 
 **ReconHunter** is an automated reconnaissance framework designed to streamline the web security reconnaissance process.
 It integrates multiple industry-standard reconnaissance and vulnerability scanning tools into a single automated pipeline.
