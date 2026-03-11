@@ -6,7 +6,6 @@ NC="\033[0m"
 
 mode="full"
 
-
 CONFIG_FILE="config.yaml"
 ACTIVE_ENUM=false
 BASE_OUTPUT=$(yq '.general.output_directory' "$CONFIG_FILE")
@@ -34,13 +33,13 @@ install_tools() {
 	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
 	sudo apt install findomain
 	go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
-    sudo cp ~/go/bin/httpx /usr/local/bin/
+	sudo cp ~/go/bin/httpx /usr/local/bin/
 	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 	go install github.com/tomnomnom/assetfinder@latest
 	go install github.com/tomnomnom/waybackurls@latest
 	go install github.com/lc/gau/v2/cmd/gau@latest
-    sudo mv ~/go/bin/gau /usr/local/bin/
+	sudo mv ~/go/bin/gau /usr/local/bin/
 	go install github.com/projectdiscovery/ffuf@latest
 	echo "[+] Installation complete"
 }
@@ -103,37 +102,54 @@ run_enumeration() {
 }
 
 run_dns() {
-	# ---------------------
-	# 2. DNS Resolution
-	# ---------------------
-	echo -e "${GREEN}[+] Resolving live subdomains..."
-	dnsx -l "$output_dir/all_subdomains.txt" -silent -a -resp >"$output_dir/resolved.txt"
+	echo -e "${GREEN}[+] Resolving IP addresses of alive hosts...${NC}"
+
+	cat "$output_dir/alive_http.txt" |
+		sed 's|https\?://||' |
+		dnsx -silent \
+			>"$output_dir/resolved.txt"
+
 	print_stat "Resolved hosts" "$output_dir/resolved.txt"
 }
 
 # nmap port scanning
 
 run_port_scanning() {
-	# ---------------------
-	# 3. Port Scanning
-	# ---------------------
-	echo -e "${GREEN}[+] Running Nmap port scan..."
 
-	if [ -s "$output_dir/resolved.txt" ]; then
-		nmap -iL "$output_dir/resolved.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
-		port_count=$(grep "open" "$output_dir/nmap_scan.gnmap" | wc -l 2>/dev/null || echo 0)
+	# ---------------------
+	# 4. Port Scanning
+	# ---------------------
+
+	echo -e "${GREEN}[+] Running Nmap port scan...${NC}"
+
+	if [[ -s "$output_dir/alive_http.txt" ]]; then
+
+		cat "$output_dir/alive_http.txt" |
+			sed 's|https\?://||' |
+			sort -u \
+				>"$output_dir/nmap_targets.txt"
+
+		nmap -iL "$output_dir/nmap_targets.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
+
+		port_count=$(grep "open" "$output_dir/nmap_scan.gnmap" 2>/dev/null | wc -l || echo 0)
+
 		echo -e "${GREEN}[ReconHunter] Open ports discovered: $port_count${NC}"
+
 	else
-		echo -e "${RED}[!] Skipping Nmap - No resolved hosts found."
+		echo -e "${RED}[!] Skipping Nmap - No alive hosts found.${NC}"
 	fi
 }
 
 run_http_probing() {
-	# ---------------------
-	# 4. HTTP Probing
-	# ---------------------
-	echo -e "${GREEN}[+] Probing live HTTP services..."
-	httpx -l "$output_dir/resolved.txt" -silent >"$output_dir/alive_http.txt"
+	echo -e "${GREEN}[+] Probing HTTP services...${NC}"
+
+	httpx \
+		-l "$output_dir/all_subdomains.txt" \
+		-silent \
+		-threads 100 \
+		-o "$output_dir/alive_http.txt"
+
+	print_stat "Alive HTTP hosts" "$output_dir/alive_http.txt"
 }
 
 run_tech_detection() {
@@ -599,7 +615,7 @@ tools=(
 	amass
 	dnsx
 	httpx
-    gau
+	gau
 	nuclei
 	ffuf
 	arjun
@@ -655,10 +671,10 @@ exec 2>&1
 if [[ "$mode" == "fast" ]]; then
 	echo "[1/6] Subdomain Enumeration"
 	run_enumeration
-	echo "[2/6] DNS Resolution"
-	run_dns
-	echo "[3/6] HTTP Probing"
+	echo "[2/6] HTTP Probing"
 	run_http_probing
+	echo "[3/6] DNS Resolution"
+	run_dns
 	echo "[4/6] Archive URL Gathering"
 	run_archive_url
 	echo "[5/6] Nuclei Vulnerability Scanning"
@@ -670,14 +686,16 @@ fi
 # Full Mode
 
 if [[ "$mode" == "full" ]]; then
-	if [[ "$mode" == "full" ]] && [[ "$ACTIVE_ENUM" == false ]]; then
+	if [[ "$ACTIVE_ENUM" == false ]]; then
 		ACTIVE_ENUM=true
 	fi
 	echo "[1/11] Subdomain Enumeration"
 	run_enumeration
-	echo "[2/11] DNS Resolution"
+	echo "[2/11] HTTP Probing"
+	run_http_probing
+	echo "[3/11] DNS Resolution"
 	run_dns
-	echo "[3/11] Port Scanning"
+	echo "[4/11] Port Scanning"
 	run_port_scanning
 	echo "[4/11] HTTP Probing"
 	run_http_probing
