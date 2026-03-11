@@ -236,17 +236,16 @@ run_nuclei_scans() {
 	# ---------------------
 	echo -e "${GREEN}[+] Scanning with Nuclei on alive http..."
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
-		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt"
+		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt" -silent -severity critical,high
 	fi
 	echo -e "${GREEN}[+] Scanning with Nuclei on all urls..."
 	if [[ -s "$output_dir/all_urls.txt" ]]; then
-		nuclei -l "$output_dir/all_urls.txt" -o "$output_dir/nuclei_urls.txt"
+		nuclei -l "$output_dir/all_urls.txt" -o "$output_dir/nuclei_output.txt" -silent -severity critical,high
 	fi
 	print_stat "Vulnerabilities detected" "$output_dir/nuclei_output.txt"
 	# ---------------------
 	# Done
 	# ---------------------
-	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 }
 
 run_recon_summary_report() {
@@ -275,7 +274,6 @@ run_recon_summary_report() {
 	echo -e "${NC}Vulnerabilities Found  : ${vuln_count:-0}"
 
 	echo
-	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 
 	# ---------------------
 	# Report Generation
@@ -494,6 +492,7 @@ run_recon_summary_report() {
     </body>
     </html>
 EOF
+	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 }
 
 # ---------------------
