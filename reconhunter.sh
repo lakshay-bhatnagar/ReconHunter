@@ -72,7 +72,7 @@ run_enumeration() {
 		amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" 2>/dev/null &
 	fi
 
-	crt_output=$(curl -m 10 -s "$(printf "$CRT_API" "$domain")")
+	crt_output=$(curl -m 10 -s "https://crt.sh/?q=%25.$domain&output=json")
 
 	if echo "$crt_output" | jq . >/dev/null 2>&1; then
 		echo "$crt_output" |
@@ -90,7 +90,10 @@ run_enumeration() {
 	fi
 
 	echo "[+] Waiting for enumeration tools to finish..."
-	wait || true
+	jobs -l
+	for job in $(jobs -p); do
+		wait "$job" || true
+	done
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
 
