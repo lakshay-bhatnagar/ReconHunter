@@ -6,7 +6,6 @@ NC="\033[0m"
 
 mode="full"
 
-set -euo pipefail
 
 CONFIG_FILE="config.yaml"
 ACTIVE_ENUM=false
