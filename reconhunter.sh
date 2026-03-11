@@ -67,9 +67,10 @@ run_enumeration() {
 
 	subfinder -d "$domain" -silent >"$output_dir/subs_subfinder.txt" 2>/dev/null &
 
-	findomain -t "$domain" -u "$output_dir/subs_findomain.txt" >/dev/null 2>&1 &
-
-	amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" 2>/dev/null &
+	if [[ "$mode" != "fast" ]]; then
+		findomain -t "$domain" -u "$output_dir/subs_findomain.txt" >/dev/null 2>&1 &
+		amass enum -passive -d "$domain" -silent -o "$output_dir/subs_amass.txt" 2>/dev/null &
+	fi
 
 	crt_output=$(curl -s "$(printf "$CRT_API" "$domain")")
 
@@ -88,7 +89,7 @@ run_enumeration() {
 		amass enum -active -d "$domain" -silent -o "$output_dir/subs_amassactive.txt" 2>/dev/null &
 	fi
 
-    echo "[+] Running subdomain tools..."
+	echo "[+] Running subdomain tools..."
 	wait
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
