@@ -90,7 +90,7 @@ run_enumeration() {
 	fi
 
 	echo "[+] Waiting for enumeration tools to finish..."
-	wait
+	wait || true
 
 	echo "${GREEN}[+] Merging and deduplicating subdomains..."
 
