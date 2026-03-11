@@ -1,0 +1,57 @@
+# ReconHunter Configuration File
+
+# General settings
+general:
+  output_directory: reports
+  save_logs: true
+
+# Wordlists
+wordlists:
+  directory_bruteforce: /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+
+# Performance settings
+performance:
+  ffuf_threads: 40
+
+# Network scanning
+nmap:
+  timing: T4
+
+# Tools used in pipeline
+tools:
+  subdomain_tools:
+    - assetfinder
+    - subfinder
+    - findomain
+    - amass
+
+  url_collection:
+    - gau
+    - waybackurls
+
+# Nuclei settings
+nuclei:
+  templates_path: ~/nuclei-templates
+  severity:
+    - critical
+    - high
+    - medium
+    - low
+
+# Screenshot settings
+screenshots:
+  enabled: true
+  directory: screenshots
+
+# Technology detection
+tech_detection:
+  enabled: true
+  tool: whatweb
+
+# Report generation
+report:
+  filename: report.html
+
+# External APIs
+apis:
+  crtsh: "https://crt.sh/?q=%25.%s&output=json"
