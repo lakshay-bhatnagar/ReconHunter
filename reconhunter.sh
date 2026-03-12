@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.0.1"
+VERSION="1.1.0"
 
 mode="full"
 
