@@ -286,6 +286,8 @@ run_directory_bruteforce() {
 run_nuclei_scans() {
 
 	echo -e "${GREEN}[+] Scanning with Nuclei on alive HTTP hosts...${NC}"
+	echo "[+] Updating nuclei templates..."
+	nuclei -update-templates >/dev/null 2>&1
 
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
 		nuclei \
@@ -293,6 +295,8 @@ run_nuclei_scans() {
 			-o "$output_dir/nuclei_output.txt" \
 			-rl 50 \
 			-silent \
+			-nc \
+			-ni \
 			-severity critical,high,medium,low
 	fi
 
@@ -316,6 +320,8 @@ run_nuclei_scans() {
 			-as "$output_dir/nuclei_output.txt" \
 			-rl 50 \
 			-silent \
+			-nc \
+			-ni \
 			-severity critical,high,medium,low
 	fi
 
