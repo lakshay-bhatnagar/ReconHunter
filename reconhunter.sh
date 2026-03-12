@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.1.1"
+VERSION="1.2.0"
 
 mode="full"
 
@@ -211,17 +211,23 @@ run_tech_detection() {
 }
 
 run_screenshot_capture() {
-	# ---------------------
-	# 6. Screenshot Capture
-	# ---------------------
-	echo -e "${GREEN}[+] Capturing screenshots with Gowitness..."
+    # ---------------------
+    # 6. Screenshot Capture (Aquatone)
+    # ---------------------
+    echo -e "${GREEN}[+] Capturing screenshots with Aquatone...${NC}"
 
-	if command -v gowitness &>/dev/null; then
-		mkdir -p "$output_dir/$SCREENSHOT_DIR"
-		gowitness scan file -f "$output_dir/alive_http.txt" --screenshot-path "$output_dir/$SCREENSHOT_DIR"
-	else
-		echo -e "${RED}[!] Gowitness not installed. Skipping screenshots."
-	fi
+    if command -v aquatone &>/dev/null; then
+        # Create a specific directory for aquatone results
+        mkdir -p "$output_dir/aquatone"
+        
+        # Aquatone works best by piping the 'alive' hosts into it
+        # We use -out to specify the directory and -threads to speed it up
+        cat "$output_dir/alive_http.txt" | aquatone -out "$output_dir/aquatone" -threads 5 -silent
+        
+        echo -e "${GREEN}[+] Aquatone report generated at $output_dir/aquatone/aquatone_report.html"
+    else
+        echo -e "${RED}[!] Aquatone not installed. Skipping screenshots.${NC}"
+    fi
 }
 
 run_archive_url() {
