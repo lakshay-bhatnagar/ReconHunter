@@ -6,8 +6,10 @@ NC="\033[0m"
 echo -e "${GREEN}[+] Detecting OS...${NC}"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
-
 	echo "[+] macOS detected"
+
+	# 1. Force Homebrew path into current script session
+	export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 	if ! command -v brew &>/dev/null; then
 		echo "[+] Installing Homebrew..."
@@ -15,11 +17,13 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 	fi
 
 	echo "[+] Installing dependencies via Homebrew..."
+	# Removed whatweb from this line to prevent the error you saw
+	brew install jq curl nmap ffuf yq findomain go coreutils amass python git
 
-	brew install jq curl whatweb nmap ffuf yq findomain go coreutils amass python git
-	# Refresh path immediately after installing Go
-	if [[ "$OSTYPE" == "darwin"* ]]; then
-		export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+	# 2. Install WhatWeb via Ruby Gem instead
+	if ! command -v whatweb &>/dev/null; then
+		echo "[+] Installing WhatWeb via gem..."
+		sudo gem install whatweb
 	fi
 
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
@@ -46,8 +50,15 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 fi
 
 if ! command -v go &>/dev/null; then
-	echo "[!] Go installation failed or not found in PATH."
-	exit 1
+	# Final attempt to find it before failing
+	if [ -f "/opt/homebrew/bin/go" ]; then
+		export PATH="/opt/homebrew/bin:$PATH"
+	elif [ -f "/usr/local/bin/go" ]; then
+		export PATH="/usr/local/bin:$PATH"
+	else
+		echo -e "${RED}[!] Go installation failed or not found in PATH.${NC}"
+		exit 1
+	fi
 fi
 
 echo -e "${GREEN}[+] Installing Go tools...${NC}"
