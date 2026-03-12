@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 
+# Add Go bin, Homebrew paths (Intel & Silicon), and local bins
+export PATH="$PATH:$HOME/go/bin:$(go env GOPATH 2>/dev/null)/bin:/usr/local/bin:/opt/homebrew/bin"
+
+# Cross-platform timeout wrapper
+if command -v gtimeout &>/dev/null; then
+	alias timeout='gtimeout'
+elif ! command -v timeout &>/dev/null; then
+	echo -e "${RED}[!] timeout command not found. Install coreutils (Mac) or setup PATH.${NC}"
+fi
+
 GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
+
+VERSION="1.0.1"
 
 mode="full"
 
@@ -18,14 +30,45 @@ CRT_API=$(yq '.apis.crtsh' "$CONFIG_FILE")
 
 trap 'echo -e "\n${RED}[!] Error occurred at line $LINENO. Exiting.${NC}"' ERR
 
-# installation function
+# installation function macOS
+
+install_tools_mac() {
+	echo "[+] Installing required tools for macOS..."
+
+	# Check if Homebrew is installed
+	if ! command -v brew &>/dev/null; then
+		echo "[!] Homebrew not found. Installing now..."
+		/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	fi
+
+	# Install standard packages
+	brew install yq jq curl nmap whatweb findomain amass go
+	brew install coreutils
+
+	# Install Go-based tools (ProjectDiscovery & TomNomNom)
+	echo "[+] Installing Go-based security tools..."
+	go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
+	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
+	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
+	go install github.com/tomnomnom/assetfinder@latest
+	go install github.com/tomnomnom/waybackurls@latest
+	go install github.com/lc/gau/v2/cmd/gau@latest
+	go install github.com/projectdiscovery/ffuf@latest
+
+	# Optional: Arjun usually requires pip (Python)
+	pip3 install arjun
+
+	echo "[+] Installation complete. Ensure ~/go/bin is in your PATH."
+}
+
+# installation function linux
 
 install_tools() {
 
 	echo "[+] Installing required tools..."
 
 	sudo apt update
-	sudo apt install yq
 	sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
 	sudo chmod +x /usr/local/bin/yq
 	sudo apt install -y jq curl whatweb nmap
@@ -33,7 +76,9 @@ install_tools() {
 	go install github.com/projectdiscovery/httpx/cmd/httpx@latest
 	sudo apt install findomain
 	go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
-	sudo cp ~/go/bin/httpx /usr/local/bin/
+	# Better way to move binaries on Linux
+	GOPATH_BIN=$(go env GOPATH)/bin
+	sudo cp "$GOPATH_BIN/httpx" /usr/local/bin/
 	go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 	go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 	go install github.com/tomnomnom/assetfinder@latest
@@ -147,6 +192,8 @@ run_http_probing() {
 		-l "$output_dir/all_subdomains.txt" \
 		-silent \
 		-threads 100 \
+		-retries 2 \
+		-timeout 10 \
 		-o "$output_dir/alive_http.txt"
 
 	print_stat "Alive HTTP hosts" "$output_dir/alive_http.txt"
@@ -185,7 +232,7 @@ run_archive_url() {
 	# ---------------------
 	echo -e "${GREEN}[+] Gathering URLs from gau and waybackurls..."
 	if command -v gau &>/dev/null; then
-		timeout 60 gau "$domain" >>"$output_dir/urls_gau.txt"
+		timeout 60 gau "$domain" >>"$output_dir/urls_gau.txt" 2>/dev/null
 	else
 		echo -e "${RED}[!] gau not installed"
 	fi
@@ -224,8 +271,16 @@ run_directory_bruteforce() {
 		echo "[!] Wordlist not found: $wordlist"
 	else
 		while read -r url; do
-			ffuf -u "$url/FUZZ" -w "$wordlist" -t "$FFUF_THREADS" -o "$output_dir/ffuf_$(echo "$url" | cut -d/ -f3).json" -of json
+			(
+				ffuf -u "$url/FUZZ" \
+					-w "$wordlist" \
+					-t "$FFUF_THREADS" \
+					-o "$output_dir/ffuf_$(echo "$url" | cut -d/ -f3).json" \
+					-of json
+			) &
 		done <"$output_dir/alive_http.txt"
+
+		wait
 	fi
 
 }
@@ -402,7 +457,7 @@ run_recon_summary_report() {
 	.list a:hover{
 		text-decoration:underline;
 	}
-	
+
 	/* Footer */
 
 	footer{
@@ -657,7 +712,11 @@ while [[ $# -gt 0 ]]; do
 		;;
 
 	--install)
-		install_tools
+		if [[ "$OSTYPE" == "darwin"* ]]; then
+			install_tools_mac
+		else
+			install_tools
+		fi
 		exit
 		;;
 
@@ -680,7 +739,7 @@ while [[ $# -gt 0 ]]; do
 		;;
 
 	--version)
-		echo "ReconHunter v1.0"
+		echo "ReconHunter $VERSION"
 		exit
 		;;
 
@@ -715,7 +774,13 @@ mkdir -p "$output_dir"
 
 echo
 echo "====================================================="
-echo "               ReconHunter v1.0"
+echo "██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗
+      ██╔══██╗██╔════╝██╔════╝██╔═══██╗████╗  ██║
+      ██████╔╝█████╗  ██║     ██║   ██║██╔██╗ ██║
+      ██╔══██╗██╔══╝  ██║     ██║   ██║██║╚██╗██║
+      ██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
+      ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝ˇ"
+echo "               ReconHunter v$VERSION"
 echo "           Automated Recon Framework"
 echo " ⭐ GitHub: github.com/lakshay-bhatnagar/ReconHunter"
 echo "====================================================="
@@ -725,6 +790,7 @@ echo "[*] Target: $domain"
 echo "[*] Output directory: $output_dir"
 echo
 
+start_time=$(date +%s)
 # ---------------------
 # Tool Dependency Check
 # ---------------------
@@ -807,9 +873,6 @@ fi
 # Full Mode
 
 if [[ "$mode" == "full" ]]; then
-	if [[ "$ACTIVE_ENUM" == false ]]; then
-		ACTIVE_ENUM=true
-	fi
 	echo "[1/11] Subdomain Enumeration"
 	run_enumeration
 	echo "[2/11] HTTP Probing"
@@ -818,8 +881,6 @@ if [[ "$mode" == "full" ]]; then
 	run_dns
 	echo "[4/11] Port Scanning"
 	run_port_scanning
-	echo "[4/11] HTTP Probing"
-	run_http_probing
 	echo "[5/11] Technology Detection"
 	run_tech_detection
 	echo "[6/11] Screenshot Capture"
@@ -844,3 +905,8 @@ if [[ "$mode" == "scan" ]]; then
 	echo "[2/2] Nuclei Vulnerability Scanning"
 	run_nuclei_scans
 fi
+
+end_time=$(date +%s)
+runtime=$((end_time-start_time))
+
+echo "[ReconHunter] Scan finished in ${runtime}s"
