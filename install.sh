@@ -1,26 +1,81 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-echo "[+] Installing ReconHunter dependencies..."
+GREEN="\033[0;32m"
+NC="\033[0m"
 
-sudo apt update
-sudo apt install -y jq curl whatweb nmap ffuf
-sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
-sudo chmod +x /usr/local/bin/yq
-echo "[+] Installing Go tools..."
+echo -e "${GREEN}[+] Detecting OS...${NC}"
+
+if [[ "$OSTYPE" == "darwin"* ]]; then
+
+	echo "[+] macOS detected"
+
+	if ! command -v brew &>/dev/null; then
+		echo "[+] Installing Homebrew..."
+		/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	fi
+
+	echo "[+] Installing dependencies via Homebrew..."
+
+	brew install jq curl whatweb nmap ffuf yq findomain go coreutils amass python git
+	# Refresh path immediately after installing Go
+	if [[ "$OSTYPE" == "darwin"* ]]; then
+		export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+	fi
+
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+
+	echo "[+] Linux detected"
+
+	sudo apt update
+	sudo apt install -y jq curl whatweb nmap ffuf golang git unzip python3-pip amass
+
+	echo "[+] Installing yq..."
+
+	sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+	sudo chmod +x /usr/local/bin/yq
+
+	if ! command -v findomain &>/dev/null; then
+		echo "[+] Installing findomain..."
+
+		curl -LO https://github.com/Findomain/Findomain/releases/latest/download/findomain-linux.zip
+		unzip findomain-linux.zip
+		sudo mv findomain /usr/local/bin/
+		rm findomain-linux.zip
+	fi
+
+fi
+
+if ! command -v go &>/dev/null; then
+	echo "[!] Go installation failed or not found in PATH."
+	exit 1
+fi
+
+echo -e "${GREEN}[+] Installing Go tools...${NC}"
+
+export PATH="$PATH:$(go env GOPATH)/bin"
 
 go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
 go install github.com/projectdiscovery/httpx/cmd/httpx@latest
-sudo apt install findomain
-go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
 go install github.com/projectdiscovery/dnsx/cmd/dnsx@latest
 go install github.com/projectdiscovery/nuclei/v2/cmd/nuclei@latest
 go install github.com/tomnomnom/assetfinder@latest
 go install github.com/tomnomnom/waybackurls@latest
 go install github.com/lc/gau/v2/cmd/gau@latest
+go install github.com/sensepost/gowitness@latest
 go install github.com/projectdiscovery/ffuf@latest
 
-echo "[+] Downloading SecLists..."
+echo "[+] Installing Arjun..."
+pip3 install arjun --break-system-packages >/dev/null 2>&1 || pip3 install arjun >/dev/null 2>&1
 
-git clone https://github.com/danielmiessler/SecLists ~/SecLists
+echo -e "${GREEN}[+] Downloading SecLists...${NC}"
 
-echo "[+] Setup complete!"
+if [ ! -d "$HOME/SecLists" ]; then
+	git clone --depth 1 https://github.com/danielmiessler/SecLists "$HOME/SecLists"
+else
+	echo "[*] SecLists already exists, skipping download."
+fi
+
+echo
+echo -e "${GREEN}[+] Setup complete!${NC}"
+echo "[*] Add this to your shell config:"
+echo "export PATH=\$PATH:\$(go env GOPATH)/bin"
