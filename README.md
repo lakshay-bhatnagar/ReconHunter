@@ -148,11 +148,11 @@ The automated reconnaissance workflow:
 ```
 Subdomain Enumeration
         ↓
+HTTP Service Discovery
+        ↓
 DNS Resolution
         ↓
 Port Scanning
-        ↓
-HTTP Service Discovery
         ↓
 Technology Detection
         ↓
@@ -182,8 +182,8 @@ Quick reconnaissance for rapid attack surface discovery.
 Includes:
 
 * Subdomain enumeration
-* DNS resolution
 * HTTP probing
+* DNS resolution
 * URL gathering
 * Nuclei scanning
 * Report generation
@@ -242,7 +242,7 @@ ReconHunter
 Install dependencies automatically:
 
 ```
-./reconhunter.sh --install
+./install.sh
 ```
 
 This installs required tools such as:
@@ -258,6 +258,7 @@ This installs required tools such as:
 * jq
 * curl
 * nmap
+* gau
 * whatweb
 
 ---
@@ -276,10 +277,22 @@ Custom output directory:
 ./reconhunter.sh -d example.com --full -o results
 ```
 
+Active Enumeration Scanning:
+
+```
+./reconhunter.sh -d example.com --fast --active
+```
+
 Display help:
 
 ```
 ./reconhunter.sh --help
+```
+
+Display version
+
+```
+./reconhunter.sh --version
 ```
 
 ---

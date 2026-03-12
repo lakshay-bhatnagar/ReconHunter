@@ -268,6 +268,7 @@ run_recon_summary_report() {
 		vuln_count=0
 	fi
 
+	echo
 	echo -e "${NC}Total Subdomains Found : ${sub_count:-0}"
 	echo -e "${NC}Alive HTTP Hosts       : ${alive_count:-0}"
 	echo -e "${NC}URLs Collected         : ${url_count:-0}"
@@ -287,6 +288,8 @@ run_recon_summary_report() {
 	report="$output_dir/$REPORT_FILE"
 
 	echo "[+] Generating HTML report..."
+	echo
+	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 
 	cat <<EOF >"$report"
     <html>
@@ -492,7 +495,6 @@ run_recon_summary_report() {
     </body>
     </html>
 EOF
-	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 }
 
 # ---------------------
