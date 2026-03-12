@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.2.1"
+VERSION="1.3.0"
 
 mode="full"
 
@@ -158,30 +158,55 @@ run_dns() {
 	print_stat "Resolved hosts" "$output_dir/resolved.txt"
 }
 
-# nmap port scanning
+# naabu port scanning
 
-run_port_scanning() {
+run_naabu_scan() {
 
-	# ---------------------
-	# 4. Port Scanning
-	# ---------------------
+	echo -e "${GREEN}[+] Running Naabu fast port scan...${NC}"
 
-	echo -e "${GREEN}[+] Running Nmap port scan...${NC}"
-
-	if [[ -s "$output_dir/alive_http.txt" ]]; then
-
-		# Extract hostnames from URLs
-		sed -E 's#https?://##' "$output_dir/alive_http.txt" | cut -d/ -f1 | sort -u >"$output_dir/nmap_targets.txt"
-
-		nmap -iL "$output_dir/nmap_targets.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
-
-		port_count=$(grep "open" "$output_dir/nmap_scan.gnmap" 2>/dev/null | wc -l || echo 0)
-
-		echo -e "${GREEN}[ReconHunter] Open ports discovered: $port_count${NC}"
-
-	else
-		echo -e "${RED}[!] Skipping Nmap - No alive hosts found.${NC}"
+	if ! command -v naabu &>/dev/null; then
+		echo -e "${RED}[!] Naabu not installed. Skipping port scan.${NC}"
+		return
 	fi
+
+	# extract hostnames
+	sed -E 's#https?://##' "$output_dir/alive_http.txt" | cut -d/ -f1 | sort -u >"$output_dir/hosts.txt"
+
+	sort -u "$output_dir/hosts.txt"
+
+	naabu \
+		-list "$output_dir/hosts.txt" \
+		-top-ports 200 \
+		-silent \
+		-o "$output_dir/open_ports.txt"
+
+	echo -e "${GREEN}[+] Naabu scan completed.${NC}"
+}
+
+# nmap service detection
+
+run_nmap_service_scan() {
+
+	echo -e "${GREEN}[+] Running Nmap service detection...${NC}"
+
+	if ! command -v nmap &>/dev/null; then
+		echo -e "${RED}[!] Nmap not installed. Skipping.${NC}"
+		return
+	fi
+
+	if [[ ! -s "$output_dir/open_ports.txt" ]]; then
+		echo -e "${RED}[!] No open ports found.${NC}"
+		return
+	fi
+
+	nmap \
+		-iL "$output_dir/open_ports.txt" \
+		-sV \
+		-Pn \
+		-T4 \
+		-oA "$output_dir/nmap_service_scan"
+
+	echo -e "${GREEN}[+] Nmap service scan completed.${NC}"
 }
 
 run_http_probing() {
@@ -924,27 +949,29 @@ fi
 # Full Mode
 
 if [[ "$mode" == "full" ]]; then
-	echo "[1/11] Subdomain Enumeration"
+	echo "[1/12] Subdomain Enumeration"
 	run_enumeration
-	echo "[2/11] HTTP Probing"
+	echo "[2/12] HTTP Probing"
 	run_http_probing
-	echo "[3/11] DNS Resolution"
+	echo "[3/12] DNS Resolution"
 	run_dns
-	echo "[4/11] Port Scanning"
-	run_port_scanning
-	echo "[5/11] Technology Detection"
+	echo "[4/12] Port Scanning"
+	run_naabu_scan
+	echo "[5/12] Service Scanning"
+	run_nmap_service_scan
+	echo "[6/12] Technology Detection"
 	run_tech_detection
-	echo "[6/11] Screenshot Capture"
+	echo "[7/12] Screenshot Capture"
 	run_screenshot_capture
-	echo "[7/11] Archive URL Gathering"
+	echo "[8/12] Archive URL Gathering"
 	run_archive_url
-	echo "[8/11] Parameter Discovery"
+	echo "[9/12] Parameter Discovery"
 	run_parameter_discovery
-	echo "[9/11] Directory Bruteforcing"
+	echo "[10/12] Directory Bruteforcing"
 	run_directory_bruteforce
-	echo "[10/11] Nuclei Vulnerability Scanning"
+	echo "[11/12] Nuclei Vulnerability Scanning"
 	run_nuclei_scans
-	echo "[11/11] Recon Summary and Report Generation"
+	echo "[12/12] Recon Summary and Report Generation"
 	run_recon_summary_report
 fi
 

@@ -68,6 +68,7 @@ go install github.com/lc/gau/v2/cmd/gau@latest
 go install github.com/sensepost/gowitness@latest
 go install github.com/ffuf/ffuf/v2@latest
 go install -v github.com/owasp-amass/amass/v4/...@master
+go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest
 
 echo "[+] Installing Arjun..."
 pip3 install arjun --break-system-packages >/dev/null 2>&1 || pip3 install arjun >/dev/null 2>&1
