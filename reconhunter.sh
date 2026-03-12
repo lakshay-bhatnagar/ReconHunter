@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.3.1"
+VERSION="1.3.2"
 
 mode="full"
 
@@ -23,6 +23,7 @@ ACTIVE_ENUM=false
 BASE_OUTPUT=$(yq '.general.output_directory' "$CONFIG_FILE")
 WORDLIST_KALI=$(yq '.wordlists.kali' config.yaml)
 WORDLIST_SECLISTS=$(yq '.wordlists.seclists' config.yaml)
+WORDLIST_SECLISTS=$(eval echo "$WORDLIST_SECLISTS")
 FFUF_THREADS=$(yq '.performance.ffuf_threads' "$CONFIG_FILE")
 NMAP_TIMING=$(yq '.nmap.timing' "$CONFIG_FILE")
 SCREENSHOT_DIR=$(yq '.screenshots.directory' "$CONFIG_FILE")
@@ -252,8 +253,7 @@ run_screenshot_capture() {
 	gowitness scan file \
 		-f "$output_dir/alive_http.txt" \
 		--screenshot-path "$output_dir/gowitness" \
-		--threads 5 \
-		--write-jsonl
+		--threads 5
 
 	echo -e "${GREEN}[+] Screenshots saved in $output_dir/gowitness${NC}"
 }
@@ -281,16 +281,27 @@ run_archive_url() {
 }
 
 run_parameter_discovery() {
-	# ---------------------
-	# 8. Parameter Discovery
-	# ---------------------
-	echo -e "${GREEN}[+] Running Arjun for parameter fuzzing..."
-	if [ -s "$output_dir/alive_http.txt" ]; then
-		arjun -i "$output_dir/alive_http.txt" --quiet -m GET -oT "$output_dir/arjun_params.txt" 2>/dev/null
-	else
-		echo -e "${RED}[!] Skipping Arjun - No alive HTTP hosts found."
-	fi
 
+	echo -e "${GREEN}[+] Running Arjun for parameter fuzzing...${NC}"
+
+	if [[ -s "$output_dir/all_urls.txt" ]]; then
+
+		grep "=" "$output_dir/all_urls.txt" >"$output_dir/param_urls.txt"
+
+		if [[ -s "$output_dir/param_urls.txt" ]]; then
+			arjun \
+				-i "$output_dir/param_urls.txt" \
+				-m GET \
+				--quiet \
+				-oT "$output_dir/arjun_params.txt" \
+				2>/dev/null || true
+		else
+			echo -e "${RED}[!] No parameterized URLs found. Skipping Arjun.${NC}"
+		fi
+
+	else
+		echo -e "${RED}[!] No URLs found. Skipping Arjun.${NC}"
+	fi
 }
 
 run_directory_bruteforce() {
@@ -622,8 +633,7 @@ run_recon_summary_report() {
 	<div class="section">
 	<h2>Discovered URLs</h2>
 
-	<pre>
-	$(head -n 100 "$output_dir/all_urls.txt" 2>/dev/null)
+	<pre>$(head -n 100 "$output_dir/all_urls.txt" 2>/dev/null)
 	</pre>
 
 	</div>
@@ -634,8 +644,7 @@ run_recon_summary_report() {
 	<div class="section">
 	<h2>Nuclei Vulnerabilities</h2>
 
-	<pre>
-	$(cat "$output_dir/nuclei_output.txt" 2>/dev/null)
+	<pre>$(cat "$output_dir/nuclei_output.txt" 2>/dev/null)
 	</pre>
 
 	</div>
@@ -646,8 +655,7 @@ run_recon_summary_report() {
 	<div class="section">
 	<h2>Technology Detection</h2>
 
-	<pre>
-	$(cat "$output_dir/whatweb.json" 2>/dev/null)
+	<pre>$(cat "$output_dir/whatweb.json" 2>/dev/null)
 	</pre>
 
 	</div>
