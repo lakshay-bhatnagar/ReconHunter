@@ -284,21 +284,24 @@ run_directory_bruteforce() {
 }
 
 run_nuclei_scans() {
-	# ---------------------
-	# 10. Nuclei Vulnerability Scanning
-	# ---------------------
 	echo -e "${GREEN}[+] Scanning with Nuclei on alive http..."
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
-		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt" -silent -severity critical,high
+		# First scan: Create the file
+		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt" -rl 50 -silent -severity critical,high
 	fi
+
 	echo -e "${GREEN}[+] Scanning with Nuclei on all urls..."
 	if [[ -s "$output_dir/all_urls.txt" ]]; then
-		nuclei -l "$output_dir/all_urls.txt" -o "$output_dir/nuclei_output.txt" -silent -severity critical,high
+		# Second scan: APPEND to the existing file using -as
+		nuclei -l "$output_dir/all_urls.txt" -as "$output_dir/nuclei_output.txt" -rl 50 -silent -severity critical,high
 	fi
+
+	# Deduplicate results just in case both scans found the same thing
+	if [[ -f "$output_dir/nuclei_output.txt" ]]; then
+		sort -u "$output_dir/nuclei_output.txt" -o "$output_dir/nuclei_output.txt"
+	fi
+
 	print_stat "Vulnerabilities detected" "$output_dir/nuclei_output.txt"
-	# ---------------------
-	# Done
-	# ---------------------
 }
 
 run_recon_summary_report() {
@@ -905,6 +908,6 @@ if [[ "$mode" == "scan" ]]; then
 fi
 
 end_time=$(date +%s)
-runtime=$((end_time-start_time))
+runtime=$((end_time - start_time))
 
 echo "[ReconHunter] Scan finished in ${runtime}s"
