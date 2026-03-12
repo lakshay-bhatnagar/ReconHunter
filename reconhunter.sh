@@ -291,209 +291,329 @@ run_recon_summary_report() {
 	echo
 	echo -e "${GREEN}[✔] Recon complete! All output saved in: $output_dir"
 
+	critical_count=$(grep -i "critical" "$output_dir/nuclei_output.txt" 2>/dev/null | wc -l || echo 0)
+	high_count=$(grep -i "high" "$output_dir/nuclei_output.txt" 2>/dev/null | wc -l || echo 0)
+	medium_count=$(grep -i "medium" "$output_dir/nuclei_output.txt" 2>/dev/null | wc -l || echo 0)
+	low_count=$(grep -i "low" "$output_dir/nuclei_output.txt" 2>/dev/null | wc -l || echo 0)
+
 	cat <<EOF >"$report"
     <html>
-    <head>
-    <title>ReconHunter Report - $domain</title>
+	<head>
+	<title>ReconHunter Report - $domain</title>
 
-    <style>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    body{
-        font-family: "Segoe UI", Arial, sans-serif;
-        background:#0d1117;
-        color:#e6edf3;
-        margin:0;
-        padding:0;
-    }
+	<style>
 
-    header{
-        background:#161b22;
-        padding:25px;
-        border-bottom:1px solid #30363d;
-    }
+	body{
+		font-family: "Segoe UI", Arial, sans-serif;
+		background:#0d1117;
+		color:#e6edf3;
+		margin:0;
+	}
 
-    header h1{
-        margin:0;
-        color:#58a6ff;
-    }
+	header{
+		background:#161b22;
+		padding:25px;
+		border-bottom:1px solid #30363d;
+	}
 
-    .container{
-        padding:30px;
-    }
+	header h1{
+		margin:0;
+		color:#58a6ff;
+	}
 
-    .cards{
-        display:flex;
-        gap:20px;
-        flex-wrap:wrap;
-        margin-bottom:30px;
-    }
+	.container{
+		padding:30px;
+	}
 
-    .card{
-        background:#161b22;
-        padding:20px;
-        border-radius:10px;
-        border:1px solid #30363d;
-        flex:1;
-        min-width:200px;
-        text-align:center;
-    }
+	/* Dashboard cards */
 
-    .card h2{
-        margin:0;
-        font-size:28px;
-        color:#58a6ff;
-    }
+	.cards{
+		display:grid;
+		grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+		gap:20px;
+		margin-bottom:40px;
+	}
 
-    .card p{
-        margin:5px 0 0 0;
-        color:#8b949e;
-    }
+	.card{
+		background:#161b22;
+		padding:25px;
+		border-radius:12px;
+		border:1px solid #30363d;
+		transition:0.2s;
+	}
 
-    .section{
-        margin-top:40px;
-    }
+	.card:hover{
+		transform:translateY(-3px);
+		border-color:#58a6ff;
+	}
 
-    .section h2{
-        border-bottom:1px solid #30363d;
-        padding-bottom:10px;
-        margin-bottom:15px;
-        color:#58a6ff;
-    }
+	.card h2{
+		margin:0;
+		font-size:34px;
+		color:#58a6ff;
+	}
 
-    table{
-        width:100%;
-        border-collapse:collapse;
-    }
+	.card p{
+		margin-top:5px;
+		color:#8b949e;
+	}
 
-    th,td{
-        padding:10px;
-        border:1px solid #30363d;
-        text-align:left;
-    }
+	/* Sections */
 
-    th{
-        background:#161b22;
-    }
+	.section{
+		margin-top:40px;
+	}
 
-    pre{
-        background:#161b22;
-        padding:20px;
-        border-radius:10px;
-        overflow:auto;
-        max-height:400px;
-    }
+	.section h2{
+		border-bottom:1px solid #30363d;
+		padding-bottom:10px;
+		color:#58a6ff;
+	}
 
-    footer{
-        text-align:center;
-        margin-top:50px;
-        padding:20px;
-        color:#8b949e;
-        border-top:1px solid #30363d;
-    }
+	/* Scrollable data blocks */
 
-    .badge{
-        padding:4px 10px;
-        border-radius:6px;
-        font-size:12px;
-        font-weight:bold;
-    }
+	pre{
+		background:#161b22;
+		padding:20px;
+		border-radius:10px;
+		overflow:auto;
+		max-height:350px;
+	}
 
-    .critical{background:#ff4d4f;}
-    .high{background:#ff7b72;}
-    .medium{background:#e3b341;}
-    .low{background:#3fb950;}
+	/* Chart container */
 
-    </style>
-    </head>
+	.chart-container{
+		background:#161b22;
+		border:1px solid #30363d;
+		padding:20px;
+		border-radius:10px;
+		margin-bottom:40px;
+	}
 
-    <body>
+	/* Clickable URLs */
 
-    <header>
-    <h1>ReconHunter Security Report</h1>
-    <p>Target: <b>$domain</b></p>
-    <p>Generated: $(date)</p>
-    </header>
+	.list a{
+    color:#58a6ff;
+    text-decoration:none;
+	}
 
-    <div class="container">
+	.list a:hover{
+		text-decoration:underline;
+	}
+	
+	/* Footer */
 
-    <div class="cards">
+	footer{
+		text-align:center;
+		padding:25px;
+		border-top:1px solid #30363d;
+		margin-top:50px;
+		color:#8b949e;
+	}
 
-    <div class="card">
-    <h2>$sub_count</h2>
-    <p>Subdomains Found</p>
-    </div>
-
-    <div class="card">
-    <h2>$alive_count</h2>
-    <p>Alive Hosts</p>
-    </div>
-
-    <div class="card">
-    <h2>$url_count</h2>
-    <p>URLs Collected</p>
-    </div>
-
-    <div class="card">
-    <h2>$vuln_count</h2>
-    <p>Vulnerabilities</p>
-    </div>
-
-    </div>
+	</style>
+	</head>
 
 
-    <div class="section">
-    <h2>Subdomains</h2>
-    <pre>
-    $(head -n 100 "$output_dir/all_subdomains.txt" 2>/dev/null)
-    </pre>
-    </div>
+	<body>
+
+	<header>
+	<h1>ReconHunter Dashboard</h1>
+	<p>Target: <b>$domain</b></p>
+	<p>Generated: $(date)</p>
+	</header>
 
 
-    <div class="section">
-    <h2>Alive Hosts</h2>
-    <pre>
-    $(head -n 100 "$output_dir/alive_http.txt" 2>/dev/null)
-    </pre>
-    </div>
+	<div class="container">
+
+	<!-- Summary Cards -->
+
+	<div class="cards">
+
+	<div class="card">
+	<h2>$sub_count</h2>
+	<p>Subdomains</p>
+	</div>
+
+	<div class="card">
+	<h2>$alive_count</h2>
+	<p>Alive Hosts</p>
+	</div>
+
+	<div class="card">
+	<h2>$url_count</h2>
+	<p>URLs Collected</p>
+	</div>
+
+	<div class="card">
+	<h2>$vuln_count</h2>
+	<p>Vulnerabilities</p>
+	</div>
+
+	</div>
 
 
-    <div class="section">
-    <h2>Discovered URLs</h2>
-    <pre>
-    $(head -n 100 "$output_dir/all_urls.txt" 2>/dev/null)
-    </pre>
-    </div>
+	<!-- Visualization -->
+
+	<div class="chart-container">
+	<canvas id="reconChart"></canvas>
+	</div>
 
 
-    <div class="section">
-    <h2>Nuclei Vulnerabilities</h2>
+	<!-- Subdomains -->
 
-    <pre>
-    $(cat "$output_dir/nuclei_output.txt" 2>/dev/null)
-    </pre>
+	<div class="section">
+	<h2>Subdomains</h2>
 
-    </div>
+	<div class="list">
+	$(head -n 100 "$output_dir/all_subdomains.txt" | sed 's|^|<a href="http://&" target="_blank">|; s|$|</a><br>|')
+	</div>
 
-    <div class="section">
-    <h2>Technology Detection</h2>
+	</div>
 
-    <pre>
-    $(cat "$output_dir/whatweb.txt" 2>/dev/null)
-    </pre>
 
-    </div>
+	<!-- Alive Hosts -->
 
-    </div>
+	<div class="section">
+	<h2>Alive Hosts</h2>
 
-    <footer>
+	<div class="list">
+	$(head -n 100 "$output_dir/alive_http.txt" | sed 's|^|<a href="|; s|$|" target="_blank">&</a><br>|')
+	</div>
 
-    ReconHunter Automated Recon Framework  
-    Created by Lakshay Bhatnagar
+	</div>
 
-    </footer>
 
-    </body>
-    </html>
+	<!-- URLs -->
+
+	<div class="section">
+	<h2>Discovered URLs</h2>
+
+	<pre>
+	$(head -n 100 "$output_dir/all_urls.txt" 2>/dev/null)
+	</pre>
+
+	</div>
+
+
+	<!-- Nuclei -->
+
+	<div class="section">
+	<h2>Nuclei Vulnerabilities</h2>
+
+	<pre>
+	$(cat "$output_dir/nuclei_output.txt" 2>/dev/null)
+	</pre>
+
+	</div>
+
+
+	<!-- Technology -->
+
+	<div class="section">
+	<h2>Technology Detection</h2>
+
+	<pre>
+	$(cat "$output_dir/whatweb.txt" 2>/dev/null)
+	</pre>
+
+	</div>
+
+	</div>
+
+	<!-- Chart -->
+
+	<div class="chart-container">
+	<h2>Vulnerability Severity Distribution</h2>
+	<canvas id="severityChart"></canvas>
+	</div>
+	</div>
+
+	<footer>
+	ReconHunter Automated Recon Framework<br>
+	Created by Lakshay Bhatnagar
+	</footer>
+
+
+	<script>
+
+	const ctx = document.getElementById('reconChart');
+
+	new Chart(ctx, {
+		type: 'bar',
+		data: {
+			labels: [
+				'Subdomains',
+				'Alive Hosts',
+				'URLs',
+				'Vulnerabilities'
+			],
+			datasets: [{
+				label: 'Recon Results',
+				data: [
+					$sub_count,
+					$alive_count,
+					$url_count,
+					$vuln_count
+				],
+				backgroundColor:[
+					'#58a6ff',
+					'#3fb950',
+					'#e3b341',
+					'#ff7b72'
+				]
+			}]
+		},
+		options:{
+			plugins:{
+				legend:{display:false}
+			},
+			scales:{
+				y:{
+					beginAtZero:true
+				}
+			}
+		}
+	});
+
+	const severityCtx = document.getElementById('severityChart');
+
+	new Chart(severityCtx, {
+		type: 'pie',
+		data: {
+			labels: ['Critical','High','Medium','Low'],
+			datasets: [{
+				data: [
+					$critical_count,
+					$high_count,
+					$medium_count,
+					$low_count
+				],
+				backgroundColor: [
+					'#ff4d4f',
+					'#ff7b72',
+					'#e3b341',
+					'#3fb950'
+				]
+			}]
+		},
+		options:{
+			plugins:{
+				legend:{
+					labels:{
+						color:'#e6edf3'
+					}
+				}
+			}
+		}
+	});
+
+	</script>
+
+	</body>
+	</html>
 EOF
 }
 
