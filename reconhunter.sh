@@ -478,6 +478,12 @@ run_recon_summary_report() {
     text-decoration:none;
 	}
 
+	/* FIX: Reduced Pie Chart Size */
+    .pie-chart-wrapper {
+        max-width: 400px;
+        margin: 0 auto; /* Centers the pie chart */
+    }
+
 	.list a:hover{
 		text-decoration:underline;
 	}
@@ -544,24 +550,20 @@ run_recon_summary_report() {
 	<!-- Subdomains -->
 
 	<div class="section">
-	<h2>Subdomains</h2>
-
-	<div class="list">
-	$(head -n 100 "$output_dir/all_subdomains.txt" | sed 's|^|<a href="http://&" target="_blank">|; s|$|</a><br>|')
-	</div>
-
+    <h2>Subdomains</h2>
+    <pre class="list">
+		$(head -n 100 "$output_dir/all_subdomains.txt" | sed 's|^|<a href="http://&" target="_blank">|; s|$|</a>|')
+    </pre>
 	</div>
 
 
 	<!-- Alive Hosts -->
 
 	<div class="section">
-	<h2>Alive Hosts</h2>
-
-	<div class="list">
-	$(head -n 100 "$output_dir/alive_http.txt" | sed 's|^|<a href="|; s|$|" target="_blank">&</a><br>|')
-	</div>
-
+    <h2>Alive Hosts</h2>
+    <pre class="list">
+		$(head -n 100 "$output_dir/alive_http.txt" | sed 's|^|<a href="|; s|$|" target="_blank">&</a>|')
+    </pre>
 	</div>
 
 
@@ -606,7 +608,9 @@ run_recon_summary_report() {
 
 	<div class="chart-container">
 	<h2>Vulnerability Severity Distribution</h2>
-	<canvas id="severityChart"></canvas>
+	<div class="pie-chart-wrapper">
+        <canvas id="severityChart"></canvas>
+    </div>
 	</div>
 	</div>
 
@@ -626,7 +630,6 @@ run_recon_summary_report() {
 			labels: [
 				'Subdomains',
 				'Alive Hosts',
-				'URLs',
 				'Vulnerabilities'
 			],
 			datasets: [{
@@ -634,14 +637,12 @@ run_recon_summary_report() {
 				data: [
 					$sub_count,
 					$alive_count,
-					$url_count,
 					$vuln_count
 				],
 				backgroundColor:[
 					'#58a6ff',
 					'#3fb950',
 					'#e3b341',
-					'#ff7b72'
 				]
 			}]
 		},
@@ -797,17 +798,17 @@ mkdir -p "$output_dir"
 # ---------------------
 
 echo
-echo "====================================================="
-echo "██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗
-      ██╔══██╗██╔════╝██╔════╝██╔═══██╗████╗  ██║
-      ██████╔╝█████╗  ██║     ██║   ██║██╔██╗ ██║
-      ██╔══██╗██╔══╝  ██║     ██║   ██║██║╚██╗██║
-      ██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
-      ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝ˇ"
+echo "========================================================="
+echo "      ██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗"
+echo "      ██╔══██╗██╔════╝██╔════╝██╔═══██╗████╗  ██║"
+echo "      ██████╔╝█████╗  ██║     ██║   ██║██╔██╗ ██║"
+echo "      ██╔══██╗██╔══╝  ██║     ██║   ██║██║╚██╗██║"
+echo "      ██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║"
+echo "      ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝ˇ"
 echo "               ReconHunter v$VERSION"
 echo "           Automated Recon Framework"
 echo " ⭐ GitHub: github.com/lakshay-bhatnagar/ReconHunter"
-echo "====================================================="
+echo "========================================================="
 echo
 echo "[*] Mode: $mode"
 echo "[*] Target: $domain"

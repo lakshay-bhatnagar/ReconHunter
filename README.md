@@ -1,9 +1,9 @@
 # ReconHunter 🔍
-![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg) ![Bash](https://img.shields.io/badge/bash-%23121011.svg?style=flat&logo=gnu-bash&logoColor=white) ![Security](https://img.shields.io/badge/Security-Tool-red?style=flat&logo=springsecurity) ![Automation](https://img.shields.io/badge/Maintained-Automation-blueviolet)
+![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg) ![Bash](https://img.shields.io/badge/bash-%23121011.svg?style=flat&logo=gnu-bash&logoColor=white) ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white) ![Linux](https://img.shields.io/badge/Linux-FCC624?style=flat&logo=linux&logoColor=black)
 
 **ReconHunter** is an automated reconnaissance framework designed to streamline the web security reconnaissance process.
 It integrates multiple industry-standard reconnaissance and vulnerability scanning tools into a single automated pipeline.
-
+**ReconHunter** is a lightweight, cross-platform automated reconnaissance framework. It now supports macOS (Intel & Apple Silicon) and Linux natively, eliminating the need for heavy virtualization or dedicated VMs.
 The goal of ReconHunter is to help security researchers, penetration testers, and bug bounty hunters quickly gather attack surface information and identify potential vulnerabilities in target domains.
 
 ---
@@ -239,12 +239,17 @@ ReconHunter
 
 ## 🛠 Installation
 
-Install dependencies automatically:
+ReconHunter features a smart installer that automatically detects your OS and sets up the environment.
 
-```
+### Prerequisites
+* **Linux:** `sudo` privileges.
+* **macOS:** [Homebrew](https://brew.sh/) installed.
+
+### Automated Setup
+```bash
+chmod +x install.sh
 ./install.sh
 ```
-
 This installs required tools such as:
 
 * subfinder
