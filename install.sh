@@ -76,7 +76,7 @@ pip3 install arjun --break-system-packages >/dev/null 2>&1 || pip3 install arjun
 echo -e "${GREEN}[+] Downloading SecLists...${NC}"
 
 if [ ! -d "$HOME/SecLists" ]; then
-	git clone --depth 1 https://github.com/danielmiessler/SecLists "$HOME/SecLists"
+	git clone https://github.com/danielmiessler/SecLists "$HOME/SecLists"
 else
 	echo "[*] SecLists already exists, skipping download."
 fi

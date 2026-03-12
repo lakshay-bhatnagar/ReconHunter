@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.3.0"
+VERSION="1.3.1"
 
 mode="full"
 
@@ -172,11 +172,9 @@ run_naabu_scan() {
 	# extract hostnames
 	sed -E 's#https?://##' "$output_dir/alive_http.txt" | cut -d/ -f1 | sort -u >"$output_dir/hosts.txt"
 
-	sort -u "$output_dir/hosts.txt"
-
 	naabu \
 		-list "$output_dir/hosts.txt" \
-		-top-ports 200 \
+		-tp 100 \
 		-silent \
 		-o "$output_dir/open_ports.txt"
 
@@ -189,22 +187,23 @@ run_nmap_service_scan() {
 
 	echo -e "${GREEN}[+] Running Nmap service detection...${NC}"
 
-	if ! command -v nmap &>/dev/null; then
-		echo -e "${RED}[!] Nmap not installed. Skipping.${NC}"
-		return
-	fi
-
 	if [[ ! -s "$output_dir/open_ports.txt" ]]; then
 		echo -e "${RED}[!] No open ports found.${NC}"
 		return
 	fi
 
+	cut -d: -f1 "$output_dir/open_ports.txt" | sort -u >"$output_dir/nmap_hosts.txt"
+	cut -d: -f2 "$output_dir/open_ports.txt" | sort -u | tr '\n' ',' | sed 's/,$//' >"$output_dir/nmap_ports.txt"
+
+	PORTS=$(cat "$output_dir/nmap_ports.txt")
+
 	nmap \
-		-iL "$output_dir/open_ports.txt" \
+		-iL "$output_dir/nmap_hosts.txt" \
+		-p "$PORTS" \
 		-sV \
 		-Pn \
 		-T4 \
-		-oA "$output_dir/nmap_service_scan"
+		-oN "$output_dir/nmap_service_scan.txt"
 
 	echo -e "${GREEN}[+] Nmap service scan completed.${NC}"
 }
@@ -229,7 +228,6 @@ run_tech_detection() {
 
 	if command -v whatweb &>/dev/null; then
 		whatweb -i "$output_dir/alive_http.txt" --log-json="$output_dir/whatweb.json" --no-errors --color=never >"$output_dir/whatweb.txt"
-		sed -r "s/\x1B\[[0-9;]*[mK]//g" "$output_dir/whatweb_raw.txt" >"$output_dir/whatweb.txt"
 	else
 		echo -e "${RED}[!] WhatWeb not installed. Skipping tech detection."
 	fi
@@ -252,9 +250,10 @@ run_screenshot_capture() {
 	mkdir -p "$output_dir/gowitness"
 
 	gowitness scan file \
-		--input "$output_dir/alive_http.txt" \
-		--output-path "$output_dir/gowitness" \
-		--threads 5
+		-f "$output_dir/alive_http.txt" \
+		--screenshot-path "$output_dir/gowitness" \
+		--threads 5 \
+		--write-jsonl
 
 	echo -e "${GREEN}[+] Screenshots saved in $output_dir/gowitness${NC}"
 }
@@ -330,7 +329,7 @@ run_nuclei_scans() {
 	echo -e "${GREEN}[+] Scanning with Nuclei on alive HTTP hosts...${NC}"
 	echo "[+] Updating nuclei templates..."
 	nuclei -update-templates >/dev/null 2>&1
-	sort -u alive_http.txt
+	sort -u "$output_dir/alive_http.txt" -o "$output_dir/alive_http.txt"
 
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
 		nuclei \
@@ -878,7 +877,11 @@ tools=(
 	amass
 	dnsx
 	httpx
+	naabu
+	gowitness
+	whatweb
 	gau
+	waybackurls
 	nuclei
 	ffuf
 	arjun

@@ -8,7 +8,7 @@ general:
 # Wordlists
 wordlists:
   kali: /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
-  seclists: wordlists/SecLists/Discovery/Web-Content/directory-list-2.3-medium.txt
+  seclists: ~/SecLists/Discovery/Web-Content/directory-list-2.3-medium.txt
 
 # Performance settings
 performance:
