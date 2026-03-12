@@ -293,7 +293,7 @@ run_nuclei_scans() {
 			-o "$output_dir/nuclei_output.txt" \
 			-rl 50 \
 			-silent \
-			-severity critical,high
+			-severity critical,high,medium,low
 	fi
 
 	echo -e "${GREEN}[+] Preparing URLs for Nuclei scanning...${NC}"
@@ -316,7 +316,7 @@ run_nuclei_scans() {
 			-as "$output_dir/nuclei_output.txt" \
 			-rl 50 \
 			-silent \
-			-severity critical,high
+			-severity critical,high,medium,low
 	fi
 
 	# Deduplicate results
