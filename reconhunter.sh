@@ -211,23 +211,23 @@ run_tech_detection() {
 }
 
 run_screenshot_capture() {
-    # ---------------------
-    # 6. Screenshot Capture (Aquatone)
-    # ---------------------
-    echo -e "${GREEN}[+] Capturing screenshots with Aquatone...${NC}"
+	# ---------------------
+	# 6. Screenshot Capture (Aquatone)
+	# ---------------------
+	echo -e "${GREEN}[+] Capturing screenshots with Aquatone...${NC}"
 
-    if command -v aquatone &>/dev/null; then
-        # Create a specific directory for aquatone results
-        mkdir -p "$output_dir/aquatone"
-        
-        # Aquatone works best by piping the 'alive' hosts into it
-        # We use -out to specify the directory and -threads to speed it up
-        cat "$output_dir/alive_http.txt" | aquatone -out "$output_dir/aquatone" -threads 5 -silent
-        
-        echo -e "${GREEN}[+] Aquatone report generated at $output_dir/aquatone/aquatone_report.html"
-    else
-        echo -e "${RED}[!] Aquatone not installed. Skipping screenshots.${NC}"
-    fi
+	if command -v aquatone &>/dev/null; then
+		# Create a specific directory for aquatone results
+		mkdir -p "$output_dir/aquatone"
+
+		# Aquatone works best by piping the 'alive' hosts into it
+		# We use -out to specify the directory and -threads to speed it up
+		cat "$output_dir/alive_http.txt" | aquatone -out "$output_dir/aquatone" -threads 5 -silent
+
+		echo -e "${GREEN}[+] Aquatone report generated at $output_dir/aquatone/aquatone_report.html"
+	else
+		echo -e "${RED}[!] Aquatone not installed. Skipping screenshots.${NC}"
+	fi
 }
 
 run_archive_url() {
