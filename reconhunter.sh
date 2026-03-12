@@ -284,19 +284,42 @@ run_directory_bruteforce() {
 }
 
 run_nuclei_scans() {
-	echo -e "${GREEN}[+] Scanning with Nuclei on alive http..."
+
+	echo -e "${GREEN}[+] Scanning with Nuclei on alive HTTP hosts...${NC}"
+
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
-		# First scan: Create the file
-		nuclei -l "$output_dir/alive_http.txt" -o "$output_dir/nuclei_output.txt" -rl 50 -silent -severity critical,high
+		nuclei \
+			-l "$output_dir/alive_http.txt" \
+			-o "$output_dir/nuclei_output.txt" \
+			-rl 50 \
+			-silent \
+			-severity critical,high
 	fi
 
-	echo -e "${GREEN}[+] Scanning with Nuclei on all urls..."
+	echo -e "${GREEN}[+] Preparing URLs for Nuclei scanning...${NC}"
+
 	if [[ -s "$output_dir/all_urls.txt" ]]; then
-		# Second scan: APPEND to the existing file using -as
-		nuclei -l "$output_dir/all_urls.txt" -as "$output_dir/nuclei_output.txt" -rl 50 -silent -severity critical,high
+
+		grep "=" "$output_dir/all_urls.txt" |
+			grep -Ev "\.(jpg|jpeg|png|gif|css|js|svg|woff|ttf|ico|pdf|mp4|mp3)$" |
+			sort -u |
+			head -n 20000 \
+				>"$output_dir/nuclei_targets.txt"
+
 	fi
 
-	# Deduplicate results just in case both scans found the same thing
+	echo -e "${GREEN}[+] Scanning filtered URLs with Nuclei...${NC}"
+
+	if [[ -s "$output_dir/nuclei_targets.txt" ]]; then
+		nuclei \
+			-l "$output_dir/nuclei_targets.txt" \
+			-as "$output_dir/nuclei_output.txt" \
+			-rl 50 \
+			-silent \
+			-severity critical,high
+	fi
+
+	# Deduplicate results
 	if [[ -f "$output_dir/nuclei_output.txt" ]]; then
 		sort -u "$output_dir/nuclei_output.txt" -o "$output_dir/nuclei_output.txt"
 	fi
