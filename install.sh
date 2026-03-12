@@ -17,9 +17,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 	fi
 
 	echo "[+] Installing dependencies via Homebrew..."
-	# Removed whatweb from this line to prevent the error you saw
-	brew install jq curl nmap ffuf yq findomain go coreutils amass python git whatweb
-
+	brew install jq curl nmap ffuf yq findomain go coreutils amass python git
 
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 
@@ -69,7 +67,7 @@ go install github.com/tomnomnom/waybackurls@latest
 go install github.com/lc/gau/v2/cmd/gau@latest
 go install github.com/sensepost/gowitness@latest
 go install github.com/ffuf/ffuf/v2@latest
-go install github.com/michenriksen/aquatone@latest
+go install -v github.com/owasp-amass/amass/v4/...@master
 
 echo "[+] Installing Arjun..."
 pip3 install arjun --break-system-packages >/dev/null 2>&1 || pip3 install arjun >/dev/null 2>&1
@@ -81,6 +79,15 @@ if [ ! -d "$HOME/SecLists" ]; then
 else
 	echo "[*] SecLists already exists, skipping download."
 fi
+
+echo "[+] Installing WhatWeb..."
+
+if [ ! -d "$HOME/tools/whatweb" ]; then
+	git clone https://github.com/urbanadventurer/WhatWeb.git "$HOME/tools/whatweb"
+fi
+
+sudo ln -sf "$HOME/tools/whatweb/whatweb" /usr/local/bin/whatweb
+chmod +x "$HOME/tools/whatweb/whatweb"
 
 echo
 echo -e "${GREEN}[+] Setup complete!${NC}"
