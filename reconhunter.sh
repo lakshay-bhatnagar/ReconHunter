@@ -192,8 +192,6 @@ run_http_probing() {
 		-l "$output_dir/all_subdomains.txt" \
 		-silent \
 		-threads 100 \
-		-retries 2 \
-		-timeout 10 \
 		-o "$output_dir/alive_http.txt"
 
 	print_stat "Alive HTTP hosts" "$output_dir/alive_http.txt"
@@ -822,7 +820,7 @@ for tool in "${tools[@]}"; do
 done
 
 if [[ "$missing" -eq 1 ]]; then
-	echo "[!] Missing dependencies. Run: reconhunter --install"
+	echo "[!] Missing dependencies. Run: ./reconhunter --install"
 	exit 1
 fi
 
