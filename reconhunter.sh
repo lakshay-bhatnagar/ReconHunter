@@ -14,7 +14,7 @@ GREEN="\033[0;32m"
 RED="\033[0;31m"
 NC="\033[0m"
 
-VERSION="1.2.0"
+VERSION="1.2.1"
 
 mode="full"
 
@@ -170,10 +170,8 @@ run_port_scanning() {
 
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
 
-		cat "$output_dir/alive_http.txt" |
-			sed 's|https\?://||' |
-			sort -u \
-				>"$output_dir/nmap_targets.txt"
+		# Extract hostnames from URLs
+		sed -E 's#https?://##' "$output_dir/alive_http.txt" | cut -d/ -f1 | sort -u >"$output_dir/nmap_targets.txt"
 
 		nmap -iL "$output_dir/nmap_targets.txt" -"${NMAP_TIMING}" -oA "$output_dir/nmap_scan"
 
@@ -205,7 +203,8 @@ run_tech_detection() {
 	echo -e "${GREEN}[+] Detecting technologies with WhatWeb..."
 
 	if command -v whatweb &>/dev/null; then
-		whatweb -i "$output_dir/alive_http.txt" --log-json="$output_dir/whatweb.json" >"$output_dir/whatweb.txt"
+		whatweb -i "$output_dir/alive_http.txt" --log-json="$output_dir/whatweb.json" --no-errors --color=never >"$output_dir/whatweb.txt"
+		sed -r "s/\x1B\[[0-9;]*[mK]//g" "$output_dir/whatweb_raw.txt" >"$output_dir/whatweb.txt"
 	else
 		echo -e "${RED}[!] WhatWeb not installed. Skipping tech detection."
 	fi
@@ -227,11 +226,10 @@ run_screenshot_capture() {
 
 	mkdir -p "$output_dir/gowitness"
 
-	gowitness file \
-		--source "$output_dir/alive_http.txt" \
-		--destination "$output_dir/gowitness" \
-		--threads 5 \
-		--delay 2
+	gowitness scan file \
+		--input "$output_dir/alive_http.txt" \
+		--output-path "$output_dir/gowitness" \
+		--threads 5
 
 	echo -e "${GREEN}[+] Screenshots saved in $output_dir/gowitness${NC}"
 }
@@ -264,7 +262,7 @@ run_parameter_discovery() {
 	# ---------------------
 	echo -e "${GREEN}[+] Running Arjun for parameter fuzzing..."
 	if [ -s "$output_dir/alive_http.txt" ]; then
-		arjun -i "$output_dir/alive_http.txt" -m GET -oT "$output_dir/arjun_params.txt" 2>/dev/null
+		arjun -i "$output_dir/alive_http.txt" --quiet -m GET -oT "$output_dir/arjun_params.txt" 2>/dev/null
 	else
 		echo -e "${RED}[!] Skipping Arjun - No alive HTTP hosts found."
 	fi
@@ -290,7 +288,7 @@ run_directory_bruteforce() {
 		while read -r url; do
 			(
 				ffuf -u "$url/FUZZ" \
-					-w "$wordlist" \
+					-w "$WORDLIST" \
 					-t "$FFUF_THREADS" \
 					-o "$output_dir/ffuf_$(echo "$url" | cut -d/ -f3).json" \
 					-of json
@@ -307,6 +305,7 @@ run_nuclei_scans() {
 	echo -e "${GREEN}[+] Scanning with Nuclei on alive HTTP hosts...${NC}"
 	echo "[+] Updating nuclei templates..."
 	nuclei -update-templates >/dev/null 2>&1
+	sort -u alive_http.txt
 
 	if [[ -s "$output_dir/alive_http.txt" ]]; then
 		nuclei \
@@ -316,7 +315,9 @@ run_nuclei_scans() {
 			-silent \
 			-nc \
 			-ni \
-			-severity critical,high,medium,low
+			-stats=false \
+			-severity critical,high,medium,low \
+			2>/dev/null
 	fi
 
 	echo -e "${GREEN}[+] Preparing URLs for Nuclei scanning...${NC}"
@@ -341,7 +342,9 @@ run_nuclei_scans() {
 			-silent \
 			-nc \
 			-ni \
-			-severity critical,high,medium,low
+			-stats=false \
+			-severity critical,high,medium,low \
+			2>/dev/null
 	fi
 
 	# Deduplicate results
@@ -620,7 +623,7 @@ run_recon_summary_report() {
 	<h2>Technology Detection</h2>
 
 	<pre>
-	$(cat "$output_dir/whatweb.txt" 2>/dev/null)
+	$(cat "$output_dir/whatweb.json" 2>/dev/null)
 	</pre>
 
 	</div>
