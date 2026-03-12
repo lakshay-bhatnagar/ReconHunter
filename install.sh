@@ -18,13 +18,8 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
 	echo "[+] Installing dependencies via Homebrew..."
 	# Removed whatweb from this line to prevent the error you saw
-	brew install jq curl nmap ffuf yq findomain go coreutils amass python git
+	brew install jq curl nmap ffuf yq findomain go coreutils amass python git whatweb
 
-	# 2. Install WhatWeb via Ruby Gem instead
-	if ! command -v whatweb &>/dev/null; then
-		echo "[+] Installing WhatWeb via gem..."
-		sudo gem install whatweb
-	fi
 
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
 

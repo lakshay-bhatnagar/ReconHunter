@@ -21,7 +21,8 @@ mode="full"
 CONFIG_FILE="config.yaml"
 ACTIVE_ENUM=false
 BASE_OUTPUT=$(yq '.general.output_directory' "$CONFIG_FILE")
-WORDLIST=$(yq '.wordlists.directory_bruteforce' "$CONFIG_FILE")
+WORDLIST_KALI=$(yq '.wordlists.kali' config.yaml)
+WORDLIST_SECLISTS=$(yq '.wordlists.seclists' config.yaml)
 FFUF_THREADS=$(yq '.performance.ffuf_threads' "$CONFIG_FILE")
 NMAP_TIMING=$(yq '.nmap.timing' "$CONFIG_FILE")
 SCREENSHOT_DIR=$(yq '.screenshots.directory' "$CONFIG_FILE")
@@ -211,23 +212,28 @@ run_tech_detection() {
 }
 
 run_screenshot_capture() {
-	# ---------------------
-	# 6. Screenshot Capture (Aquatone)
-	# ---------------------
-	echo -e "${GREEN}[+] Capturing screenshots with Aquatone...${NC}"
 
-	if command -v aquatone &>/dev/null; then
-		# Create a specific directory for aquatone results
-		mkdir -p "$output_dir/aquatone"
+	echo -e "${GREEN}[+] Capturing screenshots with Gowitness...${NC}"
 
-		# Aquatone works best by piping the 'alive' hosts into it
-		# We use -out to specify the directory and -threads to speed it up
-		cat "$output_dir/alive_http.txt" | aquatone -out "$output_dir/aquatone" -threads 5 -silent
-
-		echo -e "${GREEN}[+] Aquatone report generated at $output_dir/aquatone/aquatone_report.html"
-	else
-		echo -e "${RED}[!] Aquatone not installed. Skipping screenshots.${NC}"
+	if ! command -v gowitness &>/dev/null; then
+		echo -e "${RED}[!] Gowitness not installed. Skipping screenshots.${NC}"
+		return
 	fi
+
+	if [[ ! -s "$output_dir/alive_http.txt" ]]; then
+		echo -e "${RED}[!] No alive hosts found. Skipping screenshots.${NC}"
+		return
+	fi
+
+	mkdir -p "$output_dir/gowitness"
+
+	gowitness file \
+		--source "$output_dir/alive_http.txt" \
+		--destination "$output_dir/gowitness" \
+		--threads 5 \
+		--delay 2
+
+	echo -e "${GREEN}[+] Screenshots saved in $output_dir/gowitness${NC}"
 }
 
 run_archive_url() {
@@ -270,9 +276,16 @@ run_directory_bruteforce() {
 	# 9. Directory Bruteforcing
 	# ---------------------
 	echo -e "${GREEN}[+] Running ffuf on alive subdomains..."
-	wordlist="$WORDLIST"
-	if [ ! -f "$wordlist" ]; then
-		echo "[!] Wordlist not found: $wordlist"
+	if [[ -f "$WORDLIST_KALI" ]]; then
+		WORDLIST="$WORDLIST_KALI"
+	elif [[ -f "$SCRIPT_DIR/$WORDLIST_SECLISTS" ]]; then
+		WORDLIST="$SCRIPT_DIR/$WORDLIST_SECLISTS"
+	else
+		echo "[!] Wordlist not found. Install SecLists."
+		return
+	fi
+	if [ ! -f "$WORDLIST" ]; then
+		echo "[!] Wordlist not found: $WORDLIST"
 	else
 		while read -r url; do
 			(
