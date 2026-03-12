@@ -557,8 +557,7 @@ run_recon_summary_report() {
 
 	<div class="section">
     <h2>Subdomains</h2>
-    <pre class="list">
-		$(head -n 100 "$output_dir/all_subdomains.txt" | sed 's|^|<a href="http://&" target="_blank">|; s|$|</a>|')
+    <pre class="list">$(head -n 100 "$output_dir/all_subdomains.txt" | sed 's|.*|<a href="http://&" target="_blank">&</a>|')
     </pre>
 	</div>
 
@@ -567,8 +566,7 @@ run_recon_summary_report() {
 
 	<div class="section">
     <h2>Alive Hosts</h2>
-    <pre class="list">
-		$(head -n 100 "$output_dir/alive_http.txt" | sed 's|^|<a href="|; s|$|" target="_blank">&</a>|')
+    <pre class="list">$(head -n 100 "$output_dir/alive_http.txt" | sed 's|.*|<a href="&" target="_blank">&</a>|')
     </pre>
 	</div>
 
