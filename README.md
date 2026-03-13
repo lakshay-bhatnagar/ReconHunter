@@ -276,7 +276,9 @@ This installs required tools such as:
 
 ## 📌 Usage
 
-![demo](assets/reconhunter_demo.gif)
+<video autoplay loop muted playsinline width="100%">
+  <source src="/assets/img/reconhunter/demo.mov" type="video/mp4">
+</video>
 
 Basic usage:
 
