@@ -157,6 +157,8 @@ DNS Resolution
         ↓
 Port Scanning
         ↓
+Service Detection
+        ↓
 Technology Detection
         ↓
 Screenshot Capture
