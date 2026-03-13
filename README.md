@@ -133,6 +133,7 @@ ReconHunter generates a structured **HTML report** including:
 ![ReconHunter Report Preview](assets/dashboard_1.png)
 ![ReconHunter Report Preview](assets/dashboard_2.png)
 ![ReconHunter Report Preview](assets/dashboard_3.png)
+![ReconHunter Report Preview](assets/dashboard_4.png)
 
 * Subdomains discovered
 * Alive hosts
