@@ -94,10 +94,23 @@ install_tools() {
 # validation of domain
 
 validate_domain() {
-	if ! [[ "$domain" =~ ^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-		echo -e "${RED}[!] Invalid domain format${NC}"
-		exit 1
+	# Domain
+	if [[ "$domain" =~ ^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$ ]]; then
+		return
 	fi
+
+	# IPv4
+	if [[ "$domain" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+		return
+	fi
+
+	# IPv4 + Port
+	if [[ "$domain" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}:[0-9]{1,5}$ ]]; then
+		return
+	fi
+
+	echo -e "${RED}[!] Invalid target format${NC}"
+	exit 1
 }
 
 # all the functions
